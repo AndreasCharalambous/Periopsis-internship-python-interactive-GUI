@@ -113,7 +113,6 @@ def create_histogram(data, column, title, xlabel, bin_width=1.25, exclude_zero=F
 
 
 
-
 def create_scatter_chart(data, x_column, y_column, title, xlabel, ylabel, save=False, classification=None):
     fig, ax = plt.subplots(figsize=(10, 7))
     categories = data[y_column].astype('category').cat.codes
