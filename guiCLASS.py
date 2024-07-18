@@ -44,10 +44,10 @@ df_new['distance_to_residential'].replace('', 0, inplace=True)
 df_new['Distance to Nearest Road'].fillna(0, inplace=True)
 df_new['distance_to_residential'].fillna(0, inplace=True)
 
-# Add "General Results" to the classifications list
+# add "General Results" to the classifications list
 classifications = ['General Results'] + list(df_new['classification'].unique())
 
-# List of numerical columns excluding 'gray_value', 'Distance to Nearest Road', and 'distance_to_residential'
+# list of numerical columns excluding 'gray_value', 'Distance to Nearest Road', and 'distance_to_residential'
 numerical_columns = ['density', 'Elevation', 'Slope']
 
 def save_chart(fig, title, classification):
@@ -70,18 +70,18 @@ def create_histogram(data, column, title, xlabel, bin_width=1.25, exclude_zero=F
         print(f"No valid data for {title}. Skipping plot.")
         return
     
-    # Calculate the number of bins based on the bin width
+    # calculate the number of bins based on the bin width
     max_value = data.max()
     num_bins = int(np.ceil(max_value / bin_width))
     
-    # Define the bins edges
+    # define the bins edges
     bins = np.arange(0, (num_bins + 1) * bin_width, bin_width)
     
-    # Plot the histogram
+    # plot the histogram
     n, bins, patches = ax.hist(data, bins=bins, edgecolor='black')
     norm = plt.Normalize(n.min(), n.max())
 
-    # Define custom colormap
+    # define custom colormap
     colors = [(1.0, 1.0, 0.6), (0.6, 0.4, 0.2)]  # light brown to light yellow
     cmap = LinearSegmentedColormap.from_list("Custom", colors)
 
@@ -92,7 +92,7 @@ def create_histogram(data, column, title, xlabel, bin_width=1.25, exclude_zero=F
     plt.xlabel(xlabel)
     plt.ylabel('Frequency')
 
-    # Set x-ticks to match the bin edges
+    # set x-ticks to match the bin edges
     plt.xticks(ticks=bins[::int(10/bin_width)])  # Adjusting the step to maintain readability
 
     if exclude_zero:
@@ -102,7 +102,7 @@ def create_histogram(data, column, title, xlabel, bin_width=1.25, exclude_zero=F
     sm.set_array([])
     fig.colorbar(sm, ax=ax, label='Frequency')
 
-    # Ensure x-axis starts from 0
+    # ensure x-axis starts from 0
     ax.set_xlim(left=0)
     
     if save and classification:
@@ -195,36 +195,36 @@ def create_classification_density_road_chart(df, save=False, classification=None
         'Semi-Rural Areas': '#d95c2d',  
     }
 
-    # Plot the scatter plot with different colors for each classification
+    # plot the scatter plot with different colors for each classification
     fig, ax = plt.subplots(figsize=(10, 7))
 
-    # Define unique colors for each classification
+    # define unique colors for each classification
     classifications = df['classification'].unique()
 
-    scatter_plots = {}  # To store scatter plot handles
+    scatter_plots = {}  # to store scatter plot handles
 
     for classification in classifications:
-        color = perio_colors.get(classification, '#d3d3d3')  # Default to gray if classification not found
+        color = perio_colors.get(classification, '#d3d3d3')  # default to gray if classification not found
         subset = df[df['classification'] == classification]
         scatter = ax.scatter(subset['density'], subset['Distance to Nearest Road'], alpha=1.0, label=classification, color=color, s=50)
-        scatter_plots[classification] = scatter  # Store scatter plot handle
+        scatter_plots[classification] = scatter  # store scatter plot handle
 
-    # Add labels and title
+    # add labels and title
     ax.set_title('Πυκνότητα vs Απόσταση από τον Κοντινότερο Δρόμο (Γενικά Αποτελέσματα)', y=1.05, fontweight='bold')
     ax.set_xlabel('Πυκνότητα (τετραγωνικά μέτρα)')
     ax.set_ylabel('Απόσταση από τον Κοντινότερο Δρόμο (μέτρα)')
     
-    # Define the correct legend order
+    # define the correct legend order
     classifications_order = ['Urban Areas', 'Semi-Urban Areas', 'Semi-Rural Areas']
 
-    # Create legend with the correct order
+    # create legend with the correct order
     handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Urban Areas'], markersize=10),
                plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Semi-Urban Areas'], markersize=10),
                plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Semi-Rural Areas'], markersize=10)]
     labels = ['Αστικές Περιοχές', 'Ημι-Αστικές Περιοχές', 'Ημι-Αγροτικές Περιοχές']
     ax.legend(handles, labels, loc='upper right', bbox_to_anchor=(1, 1))
 
-    # Add a grid
+    # add a grid
     ax.grid(True)
 
     if save and classification:
@@ -239,48 +239,47 @@ def create_landcover_distance_road_chart(df, classification=None, save=False):
         'Semi-Rural Areas': '#d95c2d',  
     }
 
-    # Create a mapping of long descriptions to brief names
+    # create a mapping of long descriptions to brief names
     landcover_mapping = {
         'Land principally occupied by agriculture with significant areas of natural vegetation': 'Agriculture with Vegetation'
     }
 
-    # Replace long descriptions with brief names
+    # replace long descriptions with brief names
     df['landcover_type'] = df['landcover_type'].replace(landcover_mapping)
 
-    # Plot the scatter plot with different colors for each classification
+    # plot the scatter plot with different colors for each classification
     fig, ax = plt.subplots(figsize=(12, 8))
 
-    # Define unique colors for each classification
+    # define unique colors for each classification
     classifications = df['classification'].unique()
 
-    scatter_plots = {}  # To store scatter plot handles
+    scatter_plots = {}  # to store scatter plot handles
 
     for classification in classifications:
-        color = perio_colors.get(classification, '#d3d3d3')  # Default to gray if classification not found
+        color = perio_colors.get(classification, '#d3d3d3')  # default to gray if classification not found
         subset = df[df['classification'] == classification]
         scatter = ax.scatter(subset['Distance to Nearest Road'], subset['landcover_type'], alpha=1.0, label=classification, color=color, s=50)
-        scatter_plots[classification] = scatter  # Store scatter plot handle
+        scatter_plots[classification] = scatter  # store scatter plot handle
 
-    # Add labels and title
-    # Add labels and title
+    # add labels and title
     title = 'Landcover vs Distance to Nearest Road in General Reslts'
 
     ax.set_title(title, y=1.05, fontweight='bold')
     ax.set_xlabel('Distance to Nearest Road (m)')
     ax.set_ylabel('Landcover Type')
-    # Set y-ticks to the landcover types
+    # set y-ticks to the landcover types
     landcover_types = df['landcover_type'].unique()
     ax.set_yticks(range(len(landcover_types)))
     ax.set_yticklabels(landcover_types, rotation=0, ha='right', fontsize=10)
 
-    # Manually set the legend based on the title
+    # manually set the legend based on the title
     handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Αστικές Περιοχές'], markersize=10),
                plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Ημι-Αστικές Περιοχές'], markersize=10),
                plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Ημι-Αγροτικές Περιοχές'], markersize=10)]
     labels = ['Αστικές Περιοχές', 'Ημι-Αστικές Περιοχές', 'Ημι-Αγροτικές Περιοχές']
     ax.legend(handles, labels, loc='upper right', bbox_to_anchor=(1, 1))
 
-    # Add a grid
+    # add a grid
     ax.grid(True)
 
     if save and classification:
