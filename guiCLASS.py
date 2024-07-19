@@ -12,7 +12,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PySide6.QtCore import Qt
 
 # load the dataset
-file_path = r'C:\Users\Chris\Desktop\final graphs\20240401-dumping-final-updated-converted.csv'
+file_path = r'C:\Users\andre\OneDrive\Desktop\Internship-PERIOPSIS\csvs\20240401-dumping-final-updated-converted.csv'
 df_new = pd.read_csv(file_path)
 
 # replace "Unknown" municipalities with "Akrotiri British Sovereign Base Area"
@@ -44,10 +44,10 @@ df_new['distance_to_residential'].replace('', 0, inplace=True)
 df_new['Distance to Nearest Road'].fillna(0, inplace=True)
 df_new['distance_to_residential'].fillna(0, inplace=True)
 
-# add "General Results" to the classifications list
+# Add "General Results" to the classifications list
 classifications = ['General Results'] + list(df_new['classification'].unique())
 
-# list of numerical columns excluding 'gray_value', 'Distance to Nearest Road', and 'distance_to_residential'
+# List of numerical columns excluding 'gray_value', 'Distance to Nearest Road', and 'distance_to_residential'
 numerical_columns = ['density', 'Elevation', 'Slope']
 
 def save_chart(fig, title, classification):
@@ -57,11 +57,7 @@ def save_chart(fig, title, classification):
     fig.savefig(os.path.join(directory, title), dpi=300, bbox_inches='tight')
     plt.close(fig)
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
-
-def create_histogram(data, column, title, xlabel, bin_width=1.25, exclude_zero=False, save=False, classification=None):
+def create_histogram(data, column, title, xlabel, bins=100, exclude_zero=False, save=False, classification=None):
     fig, ax = plt.subplots(figsize=(10, 6))
     if exclude_zero:
         data = data[data[column] != 0]
@@ -69,49 +65,44 @@ def create_histogram(data, column, title, xlabel, bin_width=1.25, exclude_zero=F
     if data.empty:
         print(f"No valid data for {title}. Skipping plot.")
         return
-    
-    # calculate the number of bins based on the bin width
-    max_value = data.max()
-    num_bins = int(np.ceil(max_value / bin_width))
-    
-    # define the bins edges
-    bins = np.arange(0, (num_bins + 1) * bin_width, bin_width)
-    
-    # plot the histogram
     n, bins, patches = ax.hist(data, bins=bins, edgecolor='black')
     norm = plt.Normalize(n.min(), n.max())
 
-    # define custom colormap
-    colors = [(1.0, 1.0, 0.6), (0.6, 0.4, 0.2)]  # light brown to light yellow
+    # Define custom colormap
+    colors = [(1.0, 1.0, 0.6),(0.6, 0.4, 0.2)]  # light brown to light yellow
     cmap = LinearSegmentedColormap.from_list("Custom", colors)
 
     for count, patch in zip(n, patches):
         plt.setp(patch, 'facecolor', cmap(norm(count)))
-    
     plt.title(title, y=1.05, fontweight='bold')
     plt.xlabel(xlabel)
     plt.ylabel('Frequency')
+     # Set x-ticks interval dynamically based on the column
+    if column == 'Distance to Nearest Road':
+        plt.xticks(ticks=range(0, int(data.max()) + 1, 10))
+    elif column == 'distance_to_residential':
+        max_val = int(data.max())
+        xticks_interval = max(1, int(max_val / 20))
+        plt.xticks(ticks=range(0, max_val + 1, xticks_interval))
+    elif xticks_interval:
+        plt.xticks(ticks=range(0, int(data.max()) + 1, xticks_interval))
+    else:
+        plt.xticks(ticks=range(0, int(data.max()) + 1, max(1, int(data.max() / 20))))
 
-    # set x-ticks to match the bin edges
-    plt.xticks(ticks=bins[::int(10/bin_width)])  # Adjusting the step to maintain readability
-
-    if exclude_zero:
+    if exclude_zero:    
         plt.text(0.95, 0.95, 'Zero values excluded', transform=ax.transAxes, fontsize=12, verticalalignment='top', horizontalalignment='right', bbox=dict(facecolor='white', alpha=0.5))
-    
+   
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     fig.colorbar(sm, ax=ax, label='Frequency')
 
-    # ensure x-axis starts from 0
+    # Ensure x-axis starts from 0
     ax.set_xlim(left=0)
     
     if save and classification:
         save_chart(fig, f"{title}.png", classification)
     else:
         plt.show()
-
-
-
 
 def create_scatter_chart(data, x_column, y_column, title, xlabel, ylabel, save=False, classification=None):
     fig, ax = plt.subplots(figsize=(10, 7))
@@ -188,106 +179,69 @@ def create_pie_chart(data, title, save=False, classification=None):
         plt.show()
 
 
+def create_classification_pie_chart(df, save=False, classification=None):
+    fig, ax = plt.subplots(figsize=(12, 8))
+    classification_counts = df['classification'].value_counts()
+    classification_percentages = classification_counts / classification_counts.sum() * 100
+    classification_counts.sort_values(ascending=False, inplace=True)
+    custom_colors = plt.cm.Blues(np.linspace(0.2, 1, len(classification_counts)))
+    wedges, texts, autotexts = ax.pie(
+        classification_counts, autopct=lambda pct: f'{pct:.1f}%' if pct >= 2 else '', startangle=90, colors=custom_colors,
+        wedgeprops=dict(width=0.4, edgecolor='w')
+    )
+
+    # Add labels with classification types and actual counts
+    labels = [f'{classification} ({count})' for classification, count in zip(classification_counts.index, classification_counts)]
+    plt.legend(wedges, labels, title="Classification Types", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
+
+    # Adjust the positions of percentage labels
+    for autotext in autotexts:
+        autotext.set_color('black')
+        autotext.set_fontsize(10)
+        x, y = autotext.get_position()
+        horizontal_alignment = 'center' if x < 0 else 'center'
+        autotext.set_horizontalalignment(horizontal_alignment)
+        autotext.set_position((x * 1.2, y * 1.2))  # Move the labels out
+
+    ax.set_title("Comparison of Dumping Incidents by Classification", y=1.1, fontweight='bold')
+    plt.tight_layout()
+
+    if save and classification:
+        save_chart(fig, f"Comparison of Dumping Incidents by Classification.png", classification)
+    else:
+        plt.show()
+
 def create_classification_density_road_chart(df, save=False, classification=None):
     perio_colors = {
-        'Urban Areas': '#004c6c',  
-        'Semi-Urban Areas': '#8aa8b2',  
-        'Semi-Rural Areas': '#d95c2d',  
-    }
-
-    # plot the scatter plot with different colors for each classification
+    'Urban Areas': '#004c6c',  
+    'Semi-Urban Areas': '#8aa8b2',  
+    'Semi-Rural Areas': '#d95c2d',  
+   
+}
+    # Plot the scatter plot with different colors for each classification
     fig, ax = plt.subplots(figsize=(10, 7))
 
-    # define unique colors for each classification
+    # Define unique colors for each classification
     classifications = df['classification'].unique()
 
-    scatter_plots = {}  # to store scatter plot handles
-
     for classification in classifications:
-        color = perio_colors.get(classification, '#d3d3d3')  # default to gray if classification not found
+        color = perio_colors.get(classification, '#d3d3d3')  # Default to gray if classification not found
         subset = df[df['classification'] == classification]
-        scatter = ax.scatter(subset['density'], subset['Distance to Nearest Road'], alpha=1.0, label=classification, color=color, s=50)
-        scatter_plots[classification] = scatter  # store scatter plot handle
+        ax.scatter(subset['density'], subset['Distance to Nearest Road'], alpha=1.0, label=classification, color=color, s=50)
 
-    # add labels and title
-    ax.set_title('Πυκνότητα vs Απόσταση από τον Κοντινότερο Δρόμο (Γενικά Αποτελέσματα)', y=1.05, fontweight='bold')
-    ax.set_xlabel('Πυκνότητα (τετραγωνικά μέτρα)')
-    ax.set_ylabel('Απόσταση από τον Κοντινότερο Δρόμο (μέτρα)')
-    
-    # define the correct legend order
-    classifications_order = ['Urban Areas', 'Semi-Urban Areas', 'Semi-Rural Areas']
+    # Add labels and title
+    ax.set_title('Scatter Plot of Density vs. Distance to Nearest Road', y=1.05, fontweight='bold')
+    ax.set_xlabel('Density (square meters)')
+    ax.set_ylabel('Distance to Nearest Road (meters)')
+    ax.legend(loc='upper right', bbox_to_anchor=(1, 1))
 
-    # create legend with the correct order
-    handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Urban Areas'], markersize=10),
-               plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Semi-Urban Areas'], markersize=10),
-               plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Semi-Rural Areas'], markersize=10)]
-    labels = ['Αστικές Περιοχές', 'Ημι-Αστικές Περιοχές', 'Ημι-Αγροτικές Περιοχές']
-    ax.legend(handles, labels, loc='upper right', bbox_to_anchor=(1, 1))
-
-    # add a grid
+    # Add a grid
     ax.grid(True)
 
     if save and classification:
         save_chart(fig, f"ClassificationDensityRoad.png", classification)
     else:
         plt.show()
-
-def create_landcover_distance_road_chart(df, classification=None, save=False):
-    perio_colors = {
-        'Urban Areas': '#004c6c',  
-        'Semi-Urban Areas': '#8aa8b2',  
-        'Semi-Rural Areas': '#d95c2d',  
-    }
-
-    # create a mapping of long descriptions to brief names
-    landcover_mapping = {
-        'Land principally occupied by agriculture with significant areas of natural vegetation': 'Agriculture with Vegetation'
-    }
-
-    # replace long descriptions with brief names
-    df['landcover_type'] = df['landcover_type'].replace(landcover_mapping)
-
-    # plot the scatter plot with different colors for each classification
-    fig, ax = plt.subplots(figsize=(12, 8))
-
-    # define unique colors for each classification
-    classifications = df['classification'].unique()
-
-    scatter_plots = {}  # to store scatter plot handles
-
-    for classification in classifications:
-        color = perio_colors.get(classification, '#d3d3d3')  # default to gray if classification not found
-        subset = df[df['classification'] == classification]
-        scatter = ax.scatter(subset['Distance to Nearest Road'], subset['landcover_type'], alpha=1.0, label=classification, color=color, s=50)
-        scatter_plots[classification] = scatter  # store scatter plot handle
-
-    # add labels and title
-    title = 'Landcover vs Distance to Nearest Road in General Reslts'
-
-    ax.set_title(title, y=1.05, fontweight='bold')
-    ax.set_xlabel('Distance to Nearest Road (m)')
-    ax.set_ylabel('Landcover Type')
-    # set y-ticks to the landcover types
-    landcover_types = df['landcover_type'].unique()
-    ax.set_yticks(range(len(landcover_types)))
-    ax.set_yticklabels(landcover_types, rotation=0, ha='right', fontsize=10)
-
-    # manually set the legend based on the title
-    handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Αστικές Περιοχές'], markersize=10),
-               plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Ημι-Αστικές Περιοχές'], markersize=10),
-               plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=perio_colors['Ημι-Αγροτικές Περιοχές'], markersize=10)]
-    labels = ['Αστικές Περιοχές', 'Ημι-Αστικές Περιοχές', 'Ημι-Αγροτικές Περιοχές']
-    ax.legend(handles, labels, loc='upper right', bbox_to_anchor=(1, 1))
-
-    # add a grid
-    ax.grid(True)
-
-    if save and classification:
-        save_chart(fig, f"LandcoverDistanceRoad.png", classification)
-    else:
-        plt.show()
-
-
 
 def extract_general_statistics(df):
     stats = {
@@ -356,7 +310,6 @@ class AppDemo(QWidget):
             'Slope',
             'Landcover',
             'Landcover-Frequency',
-            'Landcover-Distance to Nearest Road',
             'Classification Comparison',
             'ClassificationDensityRoad'
         ])
@@ -392,8 +345,7 @@ class AppDemo(QWidget):
         stats = extract_general_statistics(df)
         extreme_stats = extract_extreme_statistics(df_new)
         stats_text = "\n".join([f"{key}: {value:.2f}" for key, value in stats.items()])
-        extreme_stats_text = "\n".join([f"{key}: {value}" for
-        key, value in extreme_stats.items()])
+        extreme_stats_text = "\n".join([f"{key}: {value}" for key, value in extreme_stats.items()])
         self.general_stats_text.setText(f"{stats_text}\n\n{extreme_stats_text}")
 
     def update_statistics(self):
@@ -422,23 +374,23 @@ class AppDemo(QWidget):
         bins = self.bin_slider.value()
 
         if chart == 'Distance to Nearest Road (including zero)':
-            create_histogram(df_classification, 'Distance to Nearest Road', f'Distribution of Distance to Nearest Road in {classification} (in Meters)', 'Distance to Nearest Road (m)', bins=bins)
+            create_histogram(df_classification, 'Distance to Nearest Road', f'Distribution of Distance to Nearest Road in {classification} (in Meters)', 'Distance to Nearest Road (m)',bins=bins)
         elif chart == 'Distance to Nearest Road (excluding zero)':
-            create_histogram(df_classification, 'Distance to Nearest Road', f'Distribution of Distance to Nearest Road in {classification} (in Meters)', 'Distance to Nearest Road (m)', bin_width=1.25, exclude_zero=True)
+            create_histogram(df_classification, 'Distance to Nearest Road', f'Distribution of Distance to Nearest Road in {classification} (in Meters)', 'Distance to Nearest Road (m)',bins=bins ,exclude_zero=True)
         elif chart == 'Distance to Residential Areas (including zero)':
-            create_histogram(df_classification, 'distance_to_residential', f'Distribution of Distance to Residential Areas in {classification} (in Meters)', 'Distance to residential areas (m)', bins=bins)
+            create_histogram(df_classification, 'distance_to_residential', f'Distribution of Distance to Residential Areas in {classification} (in Meters)', 'Distance to residential areas (m)',bins=bins)
         elif chart == 'Distance to Residential Areas (excluding zero)':
-            create_histogram(df_classification, 'distance_to_residential', f'Distribution of Distance to Residential Areas in {classification} (in Meters)', 'Distance to residential areas (m)', bins=bins, exclude_zero=True)
+            create_histogram(df_classification, 'distance_to_residential', f'Distribution of Distance to Residential Areas in {classification} (in Meters)', 'Distance to residential areas (m)',bins=bins ,exclude_zero=True)
         elif chart == 'Density':
-            create_histogram(df_classification, 'density', f'Distribution of Density in {classification}', 'Density in squared meters', bins=bins)
+            create_histogram(df_classification, 'density', f'Distribution of Density in {classification}', 'Density in squared meters',bins=bins)
         elif chart == 'Elevation':
-            create_histogram(df_classification, 'Elevation', f'Distribution of Elevation in {classification} (in Meters)', 'Elevation (m)', bins=bins)
+            create_histogram(df_classification, 'Elevation', f'Distribution of Elevation in {classification} (in Meters)', 'Elevation (m)',bins=bins)
         elif chart == 'Slope':
-            create_histogram(df_classification, 'Slope', f'Distribution of Slope in {classification} (in Degrees)', 'Slope (degrees)', bins=bins)
+            create_histogram(df_classification, 'Slope', f'Distribution of Slope in {classification} (in Degrees)', 'Slope (degrees)',bins=bins)
         elif chart == 'Landcover':
             create_pie_chart(df_classification, f'Distribution of Landcover Types in {classification}')
         elif chart == 'Landcover-Distance to Nearest Road':
-            create_landcover_distance_road_chart(df_classification, classification=classification)
+            create_scatter_chart(df_classification, 'Distance to Nearest Road', 'landcover_type', f'Landcover vs Distance to Nearest Road in {classification}', 'Distance to Nearest Road', 'Landcover Type')
         elif chart == 'Landcover-Density':
             create_scatter_chart(df_classification, 'density', 'landcover_type', f'Landcover vs Density in {classification}', 'Density', 'Landcover Type')
         elif chart == 'Landcover-Frequency':
@@ -448,11 +400,7 @@ class AppDemo(QWidget):
         elif chart == 'Classification Comparison':
             create_classification_pie_chart(df_new)
         elif chart == 'ClassificationDensityRoad':
-            create_classification_density_road_chart(df_classification, classification=classification)
-
-
-
-
+            create_classification_density_road_chart(df_classification)
 
 
     def save_all_charts(self):
@@ -484,6 +432,7 @@ app = QApplication(sys.argv)
 demo = AppDemo()
 demo.show()
 sys.exit(app.exec_())
+
 
 
 
